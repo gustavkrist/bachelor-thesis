@@ -42,8 +42,8 @@ sorting=ynt
 % Set pdf information and add title, fill in the fields
 %-----------------------
 \hypersetup{
-pdfsubject = {Predicting readability using language models},
-pdftitle = {},
+pdfsubject = {Predicting readability using a BERT language model with windowing technique},
+pdftitle = {Automatic classification of text readability on the CEFR scale using BERT and windowing techniques},
 pdfauthor = {Gustav Kristensen}
 }
 
@@ -56,7 +56,7 @@ pdfauthor = {Gustav Kristensen}
   \begin{center}
     \vspace*{1cm}
 
-    \textbf{Title (TBD)}
+    \textbf{Automatic classification of text readability on the CEFR scale using BERT and windowing techniques}
 
     \vspace{1cm}
 
@@ -73,15 +73,16 @@ pdfauthor = {Gustav Kristensen}
     Project code: BIBAPRO1PE \\
     IT University of Copenhagen \\
     BSc Data Science \\
-    December XX, 2024
+    December 16, 2024
   \end{center}
 \end{titlepage}
 
-\section{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+\section*{Abstract}
 
 In this project, I investigate ways to improve the accuracy of text readability
 predictions on a CEFR level using BERT language models. This is done with both
-a standard BERT model trained on whole texts, as well as a model trained using
+a standard BERT model trained on whole texts and a model trained using
 a windowing technique that is also applied during prediction.
 
 The motivation behind improving accuracy for readability prediction is grounded
@@ -89,18 +90,17 @@ in the Zeeguu platform. Zeeguu recommends articles to users based on preference
 and readability. By improving the accuracy of the readability measure, the user
 experience will be directly improved through more fitting recommendations.
 
-Zeeguu uses the FRE formula as the estimator of readability, so that is the baseline I am
-comparing the models to. Even using a standard BERT model yields a
-significantly higher performance than FRE. FRE gets an F1 score of 0.11, while
-the BERT model gets 0.19. However, using the windowing technique in combination
-with a BERT model yields even better results with an F1 score of 0.24.
+Zeeguu uses the Flesch Reading Ease (FRE) formula as the estimator of readability, so that is the baseline to which I am
+comparing the models. Even using a standard BERT model yields a
+significantly higher performance than FRE. However, using the windowing technique in combination
+with a BERT model yields even better results.
 
 Finding CEFR labeled datasets for use in model training and evaluation proved
 to be a difficult task. The training dataset used is not directly labeled with
-CEFR levels, but with difficulty levels that correspond to CEFR levels.
-Additionally it lacks any texts at the C2 level. To evaluate the models, I
+CEFR levels but with difficulty levels that correspond to CEFR levels.
+Additionally, it lacks any texts at the C2 level. To evaluate the models, I
 manually collected an evaluation corpus. The corpus consists of texts from
-English learner books from each CEFR level.
+English learner books at each CEFR level.
 
 \newpage
 
@@ -108,37 +108,33 @@ English learner books from each CEFR level.
 
 \newpage
 
-\section{Acknowledgements}
-
-The author acknowledges the IT University of Copenhagen HPC resources made available for conducting the research reported in this paper.
-
 \section{Introduction}
 
 An increasing number of people are learning a second language on their own
 using a platform such as Duolingo, which has over 500 million users
 \parencite{duolingo2022Duolingo}. Platforms like Duolingo offer a more
 personalized approach to language learning than the traditional classroom
-experience. This is also the motive behind the platform Zeeguu. Rather than a
-standardized text book that is a one-size fits all for language learners,
+experience. This is also the motive behind the Zeeguu platform. Rather than a
+standardized text book that is one-size-fits-all for language learners,
 Zeeguu acts as a "personalized textbook" that uses content from the web as its
 source \parencite{10.1145/3173574.3173912}. The Zeeguu platform recommends
-articles based on user preference and article readability. For the system to
-work well, the article readability needs to be accurate, or a user will end up
+articles based on user preference and readability of the article. For the system to
+work well, the readability of the article must be accurate, or a user will end up
 with articles that are either too easy or too difficult for them.
-The motivation behind this project is developing a method for estimating article
+The motivation behind this project is to develop a method for estimating article
 readability that is better than the method currently used in Zeeguu. This will
-improve the user experience by making the recommended articles more fitting for
+improve the user experience by making the recommended articles more suited for
 the individual user.
 
-The current method used in Zeeguu is the Flesch Reading Ease (FRE), which uses
+The current method used in Zeeguu is Flesch Reading Ease (FRE), which uses
 a formula with average sentence length and average syllables per word to
 estimate the readability of a text. The result from the FRE formula is then
-converted into CEFR level which is displayed on the website. The surface level features like words per
+converted into the CEFR level which is displayed on the website. Surface-level features such as words per
 sentence or average syllables per word used in the FRE formula have been shown
 to be poor estimators of readability \parencite{pitler-nenkova-2008-revisiting}.
-Better estimators of readability are deeper syntactic, semantic and discourse
+Better estimators of readability are deeper syntactic, semantic, and discourse
 features. Through a more advanced approach using a BERT language model, the
-hope is that it will use more of these deeper language features with higher
+hope is that it will use more of these deeper language features with greater
 correlation with readability.
 
 \noindent
@@ -146,13 +142,13 @@ Therefore, the research question that will be the focus of this paper is the
 following:
 
 \begin{displayquote}
-  How can we accurately predict the readability of articles on a CEFR level
-  through the use of language models?
+  How accurately can we predict the readability of articles on a CEFR level
+  through the use of a BERT language model?
 \end{displayquote}
 
 \noindent
-To answer this question, I train a BERT model on a large dataset of student
-submitted texts with difficulty levels that correspond to CEFR. Additionally I
+To answer this question, I train a BERT model on a large dataset of student-
+submitted texts with difficulty levels that correspond to CEFR. Additionally, I
 train another BERT model using a windowing technique to eliminate some of the
 influence of sentence length and whole text length on the model. To evaluate
 the models, I collect a small evaluation dataset of text from English learner
@@ -160,71 +156,91 @@ books at each CEFR level.
 
 \section{Related Work}
 
-Traditionally readability in texts is usually measured using a formula that
+Traditionally, readability in texts is usually measured using a formula that
 considers certain features of the text. This is commonly features such as
 average sentence length and average number of syllables per word in the text.
-One of the most commonly used measure of readability of English texts is the
+One of the most commonly used measures of readability of English texts is the
 Flesch Reading Ease (FRE), which is based on those two features. It was developed by
 Rudolf Flesch in the 1940s and is still widely used today and is used as the US
 government standard. Another widely used metric of readability is the Flesch-Kincaid reading grade level. This was
 developed by J. Peter Kincaid in 1975 and is a development on the Flesch
 reading ease intended to make it easier to use \parencite{Kincaid1975DerivationON}. The Flesch reading ease
 produces a number from 0-100. Various ranges of the score can be interpreted as
-corresponding to certain US grade levels. While the Flesch-Kincaid reading
+corresponding to certain US grade levels. Instead, the Flesch-Kincaid reading
 grade level formula produces a score that directly corresponds to a US grade
 level.
 
-About 20 years ago research into automatic classification of readability levels
-started to be done. One of the big downsides to the classical readability
-formulas is that they require certain assumptions for the text in order to work
-well. One of these is that the text must contain at least 100 words or 10
-sentences, and that it uses well defined sentences such that sentence length
+About 20 years ago, research of automatic classification of readability levels
+started. One of the big downsides of the classical readability
+formulas is that they require certain assumptions for the text to be made.
+One of these is that the text must contain at least 100 words or 10
+sentences and that it uses well-defined sentences such that sentence length
 can be properly measured. Particularly the limitation on sentence length led to
 two of the first studies into automatic classification of readability.
 \parencite{collins-thompson-callan-2004-language}
-use a multinomial naïve Bayes model that combines multiple language models to
+used a multinomial naïve Bayes model that combines multiple language models to
 estimate the most likely grade level for any given passage.
-\parencite{10.1145/1008992.1009114} use support vector machine learning algorithms
-based on both syntactic and semantic features and treat the readability
+\parencite{10.1145/1008992.1009114} used support vector machine learning algorithms
+based on both syntactic and semantic features and treated the readability
 estimation as a text classification problem.
 
 Automatic classification of readability has some benefits over the traditional
-formulas typically used for readability estimation. The main one that was the
-drive behind the studies mentioned is accuracy on shorter texts. But
-additionally the use of trained classifiers means that it is possible to train
-or re-train models for specific purposes.
-\parencite{collins-thompson-callan-2004-language} show that they obtain good
+formulas typically used for readability estimation. The main benefit that was the
+motivation behind the studies mentioned was accuracy on shorter texts. Additionally,
+the use of trained classifiers meant that it was possible to train
+or retrain models for specific purposes.
+\parencite{collins-thompson-callan-2004-language} showed that they obtained good
 performance for both English and French, only requiring a change in morphology
-handling during feature processing. Another study used an SVM and surface level
-features like sentence length and vocabulary to compare articles and sort them
-in terms of difficulty \parencite{10.1162/coli.09-036-R2-08-050}. A recent study has also looked at using
-automatic classification of readability, specifically on the CEFR scale.
-\parencite{kerz-etal-2021-automated} use RNNs combined with a sliding window
-technique to predict CEFR levels.
+handling during feature processing. Another study used an SVM with surface-level
+features such as sentence length and vocabulary to compare articles and sort them
+in terms of difficulty \parencite{10.1162/coli.09-036-R2-08-050}. By comparing the
+difficulty of articles rather than classifying the specific difficulty of each article, they
+lowered the requirements for training data by requiring only two levels of difficulty to be
+annotated. In an application like Zeeguu this alternative approach could also work. The specific
+difficulty of an article does not matter much as long as it is possible to retrieve other articles of
+similar difficulty for recommendations.
+
+As research into automatic classification of readability became more common, an important task
+was to figure out which features correlated best with readability. A study combined lexical, syntactic and discourse
+features to produce a predictive model of human readers' judgments of text readability \parencite{pitler-nenkova-2008-revisiting}.
+They showed that surface-level features such as sentence length or average number of syllables are not very good predictors
+of text readability, despite generally being expected to be. They found that readability predictors
+behave differently depending on the task. Predicting text readability and ranking the readability of texts
+cause predictors to behave differently. Discourse relations were found to be the best predictor across both tasks.
+
+A recent study \parencite{kerz-etal-2021-automated} also looked at using automatic classification of readability, specifically on the CEFR scale.
+They used RNNs combined with a sliding window technique to predict CEFR levels. They used a sliding window
+with a size of one sentence to create what they refer to as 'complexity contours.' Each sentence
+had their complexity evaluated using 57 different features. The windows were then fed into an RNN that could
+capture the sequential information of the windows. The study also found through a secondary experiment that the
+features that contributed most to classification accuracy were frequency n-gram measures. 12 of the top 20 features
+were uni-, bi- or trigram frequency measures.
 
 \section{Data}
 
 \subsection{Training Dataset}
 
-The training data come from the Education First Cambridge Open Language
+The training data came from the Education First Cambridge Open Language
 Database (EFCAMDAT) \parencite{inbook}. The database
-contains user submitted texts from EF Education First, an international English school teaching English as a second language. The database is compiled
+contains user-submitted texts from EF Education First, an international English
+school teaching English as a second language. The database is compiled
 in collaboration with Cambridge University \parencite{hgbka17}. The database
 contains student assignment submission to Englishtown, which is the online
 school of EF Education First. Students submit assignments that are graded and
-error corrected by a teacher. The grade is included in the data, as is the
+corrected for errors by a teacher. The grade is included in the data, as are the
 error corrections for a portion of the assignments. The curriculum of
-Englishtown is split into 16 levels, which cover all six CEFR levels from A1
+Englishtown is divided into 16 levels covering all six CEFR levels from A1
 to C2. The relation between the Englishtown levels and CEFR levels is shown in
 \autoref{tab:englishtown-cefr}. The database release contains a subcorpus which contains the texts that
 have error corrections supplied (Öksüz et al., paper unavailable as it is under
-review). The error corrections have been applied to the texts to produce
-corrected texts. The full database contains 1,180,309 submissions and the
+review). The error corrections have been automatically applied to the texts to produce
+corrected texts. The full database contains 1,180,309 submissions, and the
 subcorpus contains 620,207 of these with automatically corrected texts. There
 is a rather uneven distribution of CEFR labels in the subcorpus as can be seen
 in \autoref{fig:efcamdat-distribution}. Additionally, no texts from the C2 level
-are included in the subcorpus used for training the model. Some examples of
-sentences from assignment texts can be seen in \autoref{tab:efcamdat-examples}.
+are included in the subcorpus used for training the model. While a few are present in the
+whole EFCAMDAT database, the subcorpus with the corrected texts does not contain any C2
+level texts. Some examples of sentences from assignment texts can be seen in \autoref{tab:efcamdat-examples}.
 
 \begin{table}
   \centering
@@ -283,25 +299,25 @@ sentences from assignment texts can be seen in \autoref{tab:efcamdat-examples}.
 
 \subsection{Validation Dataset}
 
-For use in validating the performance of the trained model, I compiled a
-validation corpus of texts from English teaching books at each CEFR level.
-All books are from different book series all from National Geographic Learning.
+To validate the performance of the trained model, I collected a
+validation corpus. The corpus consists of texts from English teaching books at each CEFR level.
+All books are from different book series by National Geographic Learning.
 For an overview of the specific book title used for each CEFR level see
-\autoref{tab:validation-books}. All the books have a pretty similar structure
+\autoref{tab:validation-books}. All the books had a pretty similar structure
 consisting of exercises where the reader must fill in or pick the right
 word(s), multiple choice questions, and reading comprehension questions. The
-reading comprehension questions are all accompanied by a text of varying
-length. Some are a couple sentences long, while others span multiple
+reading comprehension questions were all accompanied by a text of varying
+length. Some were a couple sentences long, while others spanned multiple
 paragraphs. Some examples of texts at different CEFR levels can be seen in
 \autoref{tab:validation-examples}. I collected all of these texts from each book to use for the
 validation corpus. To extract the texts from the books, I scanned the books and
-did OCR using \verb!pytesseract! to
-extract the text. I then manually went through and corrected each scanned text,
+performed OCR using \verb!pytesseract! to
+extract the text. Then I manually went through and corrected each scanned text,
 as the text was not always extracted correctly.
 
-The assumption is that since each book is stated to be
-intended for at a specific CEFR level of proficiency, the texts from the
-reading comprehension exercises should be at that level of readability. The
+Each book is stated to be intended for a specific CEFR level of proficiency.
+Therefore, I made the assumption that the texts from the reading comprehension exercises
+should be at the same level of readability. The
 result is a corpus with CEFR labeled texts that can be used to validate the
 model. The distribution of labels in the resulting corpus is more even than in
 the training data, with many more difficult texts, as can be seen in
@@ -374,18 +390,18 @@ the training data, with many more difficult texts, as can be seen in
 \section{Methodology}
 
 I trained multiple models on the EFCAMDAT subcorpus. Some were trained using the
-texts as they are, but I also trained a model using a windowing technique
-similar to \parencite{kerz-etal-2021-automated}. In the following sections I
-will describe the setup and methodology used in training and evaluating each
+texts as they were, but I also trained a model using a windowing technique
+similar to \parencite{kerz-etal-2021-automated}. In the following sections, I
+describe the setup and methodology used in training and evaluating each
 set of models.
 
 \subsection{Dataset splitting}
 
 For training the models without the windowing technique, the whole EFCAMDAT subcorpus was split
 into train, evaluation, and test splits. This was done using random sampling.
-The training set was given 80\% of the data, with the evaluation and training
-sets each containing 10\% of the data. As illustrated in
-\autoref{fig:dataset-splits-labels}, the result is that each split of data has
+The training split was given 80\% of the data, with the evaluation and test
+splits each containing 10\% of the data. As illustrated in
+\autoref{fig:dataset-splits-labels}, the result is that each split of data had
 a nearly identical distribution of labels. I did not convert the Englishtown
 levels into CEFR before training the models, so all models output the 1-16
 Englishtown levels which can then be converted into CEFR.
@@ -399,15 +415,15 @@ Englishtown levels which can then be converted into CEFR.
 
 \subsection{Simple SVM models}
 
-I trained a some simple support vector machine (SVM) models on surface level features in the
-train split of the dataset. The features used were average sentence length and
+I trained some simple support vector machine (SVM) models on surface-level features in the
+train split of the dataset. I used the features average sentence length and
 term frequency-inverse document frequency (TF-IDF). I trained three models, two
 using each feature separately and one using both in combination. The models
 were trained using \verb!sklearn!'s \verb!SGDClassifier! which trains an SVM
-model using stochastic gradient descent (SGD) learning and default parameters. As part of
-preprocessing the features were standardized. In the model using only sentence
-length the data was standardized to unit mean and variance. In the two models
-using TF-IDF the data was only standardized to unit variance, as the very
+model using stochastic gradient descent (SGD) learning. I used the default parameters for the model.
+As part of preprocessing the features were standardized. In the model using only sentence
+length, the data were standardized to unit mean and variance. In the two models
+using TF-IDF the data were only standardized to unit variance, as the very
 sparse nature of the TF-IDF feature matrix made it impossible to standardize
 the mean.
 
@@ -421,38 +437,36 @@ The evaluation split was used to compute the accuracy for early stopping.
 
 \subsection{BERT model using windowing technique}
 
-I additionally trained a BERT model using a windowing technique on the training
+I also trained a BERT model using a windowing technique on the training
 split. Instead of each piece of training data being a full text and the
-corresponding label, the text is split into multiple data points by using a
-sliding window. The window used corresponds to about 3 sentences. I computed
+corresponding label, the text was split into multiple data points by using a
+sliding window. The window length corresponded to about 3 sentences. I computed
 the median sentence length in the dataset to be approximately 12.5 words and
 the average word length to be approximately 4 characters. By using a window
-size of 150 characters, that is equivalent to 3 sentences based on those median
-measurements. The sliding window starts at the beginning of the text and
-captures the next 150 characters. Then it moves to the beginning of the second
-sentence, takes the next 150 characters. Then it moves to the beginning of the
-third sentence, and so on until there are no more sentences in the text. An
-example of how this looks for a sample text is shown in
+size of 150 characters, that was equivalent to 3 sentences based on those median
+measurements. The sliding window started at the beginning of the text and
+captured the next 150 characters. Then it moved to the beginning of the second
+sentence and took the next 150 characters. Then it moved to the beginning of the
+third sentence, and so on until there were no more sentences in the text. An
+example of how this looked for a sample text is shown in
 \autoref{tab:windowing-example}. The idea behind using the windowing technique
-is to prevent the model from fitting to closely on just the length of the whole texts
+was to prevent the model from fitting to closely on just the length of the whole texts
 as well as the sentence lengths.
 
-The result is that there are was a lot more training data after applying the
-windowing to the dataset. To keep the training time within a realistic time frame, is was
-necessary to thin out the dataset by sampling some of it. I aimed to even out
+The result was that there were a lot more training data after applying the
+windowing to the dataset. To keep the training time within a realistic time frame, it was
+necessary to thin out the dataset by sampling some of it. I tried to even out
 the distribution of labels in the dataset somewhat by randomly sampling
 a different proportion of the data points for each label. For A1 that was 10\%
 of the data points, for A2 it was 20\%, for B1 it was 40\%, and for the
-remaining labels all data points were kept. The amount of C1 labels were too
+remaining labels, all data points were kept. The amount of C1 labels was too
 low to completely even out the distribution without keeping too little
-of the dataset. The distribution is shown in
-\autoref{fig:cefr-distribution-sampled}.
+data. The distribution is shown in \autoref{fig:cefr-distribution-sampled}.
 
 After downsampling the dataset, the windowing technique was applied to all the
-texts. Each window was now its own training data sample with the label from the
-text that it was taken from. Then I trained a BERT model using the same method
-and parameters as the one trained on the whole dataset without windowing
-applied.
+texts. Each window was now its own training data sample. Each sample was given the
+label from the text it came from. Then I trained a BERT model using the same method
+and parameters as the one trained on whole texts from the whole dataset.
 
 \begin{table}
   \centering
@@ -460,10 +474,12 @@ applied.
   For an example text from the evaluation data, the full text and corresponding
   windows look like this:
 
-  The Colosseum is an amphitheatre in the centre of the city of Rome. Today,
-  many parts of the Colosseum are ruins but it is an important example of Roman
-  architecture. It is very popular and many tourists visit it. You can see the
-  Colosseum on the country’s five-cent euro coin.
+  \begin{displayquote}
+    The Colosseum is an amphitheatre in the centre of the city of Rome. Today,
+    many parts of the Colosseum are ruins but it is an important example of Roman
+    architecture. It is very popular and many tourists visit it. You can see the
+    Colosseum on the country’s five-cent euro coin.
+  \end{displayquote}
   \end{adjustwidth}
 
   \begin{tabular}{l|p{0.80\textwidth}}
@@ -497,13 +513,13 @@ applied.
 
 \subsection{Using windowing technique in model predictions}
 
-For model prediction, apart from just predicting on the whole text, I also
-experimented with implementing the windowing technique. Rather than predicting
-on the whole text, I would use the sliding window in the same way as described
-earlier on the prediction text. Then I would have the model predict a label for
-each window of the text and then aggregate together the labels into a single label
-for the whole text. I experimented with multiple ways of aggregating together the
-labels into a single one. The most straight-forward way would be to give the
+I also experimented with implementing the sliding window technique during prediction.
+Instead of predicting on the whole text, I would use the sliding window in the same way
+as during training. The text sample would be split into windows, each given the label
+from the original text. Then I would have the model predict a label for
+each window of the text and then aggregate the labels into a single label
+for the whole text. I experimented with multiple ways of aggregating the
+labels. The most straight-forward way would be to give the
 text the label of the most frequently occurring label from the classifications
 of the windows. However, the labels are the 1-16 Englishtown levels, which can
 be considered a continuous scale. Due to this I also tried using the mean and
@@ -512,71 +528,101 @@ whole text.
 
 \section{Analysis/Results}
 
-The baseline I've chosen to compare the model results against is the Flesch
-Reading Ease (FRE) formula. This was chosen because it is the current method
+\begin{table}
+  \centering
+  \begin{tabular}{l|c}
+    \toprule
+    Model & Macro F1\\
+    \midrule
+    FRE & 0.11\\
+    \midrule
+    Standard Bert & 0.19\\
+    \midrule
+    Windowed Bert (Whole text prediction) & 0.22\\
+    \midrule
+    Windowed Bert (Highest count) & 0.23\\
+    \midrule
+    Windowed Bert (Median) & 0.24\\
+    \midrule
+    Windowed Bert (Mean) & 0.25\\
+    \midrule
+    SVC (Sentence length) & 0.14\\
+    \midrule
+    SVC (Sentence length + TF-IDF) & 0.18\\
+    \midrule
+    SVC (TF-IDF) & 0.18\\
+    \bottomrule
+  \end{tabular}
+  \caption{Results for all models on the evaluation corpus}
+  \label{tab:results}
+\end{table}
+
+I chose the Flesch Reading Ease (FRE) formula as the baseline to compare the model results to.
+This was chosen because it was the current method
 used to compute readability in the Zeeguu platform. As the motivation behind
-this project is to attempt to improve the accuracy of the readability measure
-in the Zeeguu platform, it seems sensible to choose that as a baseline. In
-Zeeguu, the FRE scores are mapped to CEFR labels by evenly dividing the FRE
+this project was to attempt to improve the accuracy of the readability measure
+of the Zeeguu platform, it seems sensible to choose that as a baseline. In
+Zeeguu the FRE scores were mapped to CEFR labels by evenly dividing the FRE
 scores that range from 0 to 100 into 6 bins, corresponding to the 6 CEFR
-levels. Therefore I will be comparing against that binning. On the evaluation
-corpus, this FRE baseline performs with an F1 score of 0.11. It is clear from
+levels. Therefore, I compared against that binning. This FRE baseline performed with an
+F1 score of 0.11 on the evaluation corpus. It is clear from
 the confusion matrix in \autoref{fig:confusion-matrices} that the FRE
-metric pretty consistently underestimates the difficulty of the texts in the
+metric consistently underestimated the difficulty of the texts in the
 evaluation corpus. In the context of usage in Zeeguu, it would be preferable to
 overestimate the difficulty level of the articles instead. It would be better
-to present the user with an article that is on the easier side than intended
+to present the user with an article that is easier than intended
 rather than one that turns out to be more difficult than they can handle.
-The bin ranges that convert the FRE score into CEFR could likely be optimized in
-future project to achieve this better accuracy and a tendency to overestimate
-instead of underestimating.
+The bin ranges that convert the FRE score into CEFR could presumably be optimized in
+future work to achieve this better accuracy and a tendency to overestimate
+rather than underestimate.
 
-The standard BERT model trained on the whole texts and predicting on the whole
-texts does perform significantly better on the evaluation corpus than the FRE
-formula. The model gets an F1 score of 0.19. As can be seen in the confusion
-matrix in \autoref{fig:confusion-matrices} the model does a better job of
-predicting the correct label and does not as consistently overestimate or
-underestimate the difficulty.
+The standard BERT model trained and predicting on the whole
+texts performed significantly better on the evaluation corpus than the FRE
+formula. The model got an F1 score of 0.19. As can be seen in the confusion
+matrix in \autoref{fig:confusion-matrices}, the model did better at
+predicting the correct label and less often overestimated or
+underestimated the readability.
 
-I wanted to get a better idea of how well some of the average sentence length
-and some simple vocabulary features can be used as an estimator for the
-readability. To achieve this I trained simple three SVM models one on average sentence
-length, one on TF-IDF and on trained on a combination of both. The model using
-only average sentence length performed with an F1 score of 0.14, while both
-models using TF-IDF scored 0.18. Thus it seems like these features used in a
-simple machine learning model is enough to reach a similar performance to the
-BERT model. It is possible that the BERT model mostly takes into consideration
-some of the more surface level features like sentence length, vocabulary and
-text length. That could explain why it is possible to reach a similar
-performance using only some of those features as estimators for the
+I wanted to get a better idea of how well some of the surface-level features, like average sentence length
+and vocabulary features, could be used as an estimator for
+readability. To achieve this I trained simple three SVM models; one on average sentence
+length, one on TF-IDF, and one trained on a combination of both. The model trained on
+average sentence length performed with an F1 score of 0.14, while both
+models using TF-IDF scored 0.18. It seemed like these features used in a
+simple machine learning model was enough to reach a similar performance to the
+BERT model. It is possible that the BERT model mostly took into consideration
+some of the more surface-level features, like sentence length, vocabulary, and
+text length. That could explain why it was possible to obtain a similar
+performance using only some of those features as estimators for
 readability.
 
-In an attempt to alleviate this concern, I trained the BERT model using the
+In an attempt to alleviate this concern I trained the BERT model using the
 windowing technique on the training data. Predicting on the whole text like
-with the standard BERT model gives an F1 score of 0.22, which is already an
-improvement. But by using the windowing technique during prediction as well the
-performance increases even more depending on the aggregation method. The worst
-performing aggregation method is choosing the prediction with the highest
-count among the windows as the prediction for the whole text. This method gets
-an F1 of 0.23. Using the median gets an F1 score of 0.24.
-But the best performing method is using the mean with an F1 score of 0.25. This
-is a big improvement over the standard BERT model and an even bigger
-improvement over the FRE formula.
+with the standard BERT model gave an F1 score of 0.22, which was already an
+improvement. But by using the windowing technique during prediction too the
+performance increased even more depending on the aggregation method. The worst
+performing aggregation method was choosing the prediction with the highest
+count among the windows as the prediction for the whole text. This method got
+an F1 of 0.23. Using the median got an F1 score of 0.24.
+Using the mean performed the best with an F1 score of 0.25. This
+was a big improvement over the standard BERT model and an even bigger
+improvement over the FRE formula. All the results mentioned are also presented
+in \autoref{tab:results} for easier comparison.
 
-Despite the mean yielding a slightly higher performance, taking the Zeeguu
-context into account the median might be better to use. Looking at the
+Despite the mean yielding slightly better performance, taking the Zeeguu
+context into account, the median might be better to use. Looking at the
 confusion matrices for the predictions using the mean and median in
 \autoref{fig:confusion-matrices}, it seems that when using the median to
-get a single prediction for a text there is more of a tendency to overestimate
-the readability a bit. As mentioned before, this is preferable to
-underestimating the difficulty, which seems to be what is happening more when
+get a single prediction for a text there was more of a tendency to overestimate
+the readability a bit. As mentioned earlier, this is preferable to
+underestimating the difficulty, which seemed to happen more when
 using the mean.
 
-Looking at \autoref{fig:level-per-window} we can get an idea of how the
+Looking at \autoref{fig:level-per-window}, we can get an idea of how the
 predictions for each window in a difficult text might look. If we look at the
-first C1 text it is a clear indication as to why simply choosing the most
+first C1 text, it is a clear indication as to why simply choosing the most
 common prediction among the windows is likely the worst option. Many of the
-windows are predicted to be level 7, while a couple are predicted at level 14
+windows are predicted to be level 7, while a couple are predicted to be level 14
 and 15 as well. But if the majority prediction is 7 the overall prediction for
 the text will be wrong. Given a text like this the median could also give a
 fairly wrong prediction if about half the windows are predicted much too low
@@ -587,30 +633,33 @@ examples where the predictions are more spread out across the scale, the median
 should also perform well.
 
 \begin{figure}
+  \begin{adjustwidth}{-3cm}{-3cm}
   \centering
-  \begin{subfigure}{0.45\textwidth}
+  \begin{subfigure}{0.6\textwidth}
     \centering
     \includegraphics[width=1\textwidth]{figures/confusion-matrix-fre.png}
   \end{subfigure}%
-  \begin{subfigure}{0.45\textwidth}
+  \hspace{1.cm}
+  \begin{subfigure}{0.6\textwidth}
     \centering
     \includegraphics[width=1\textwidth]{figures/confusion-matrix-standard-bert.png}
   \end{subfigure}
-  \begin{subfigure}{0.5\textwidth}
+  \begin{subfigure}{0.7\textwidth}
     \centering
     \includegraphics[width=1\textwidth]{figures/confusion-matrix-windowed-mean.png}
   \end{subfigure}%
-  \begin{subfigure}{0.5\textwidth}
+  \begin{subfigure}{0.7\textwidth}
     \centering
     \includegraphics[width=1\textwidth]{figures/confusion-matrix-windowed-median.png}
   \end{subfigure}
+  \end{adjustwidth}
   \caption{Confusion matrices on evaluation corpus}
   \label{fig:confusion-matrices}
 \end{figure}
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\textwidth]{figures/level-per-window.png}
+  \includegraphics[width=\textwidth]{figures/level-per-window.png}
   \caption{Englishtown level for windows in C1 and C2 texts}
   \label{fig:level-per-window}
 \end{figure}
@@ -618,12 +667,12 @@ should also perform well.
 \section{Conclusion}
 
 Using the windowing technique in combination with a BERT language model, it is
-possible to largely improve on the performance of classifying text readability
+possible to largely improve the performance of classifying text readability
 on a CEFR scale over the FRE formula used in Zeeguu. While a standard BERT
 model also outperforms the FRE formula by a significant margin, a similar
-performance can be obtained using a much simpler SVM model and surface level
-features such as sentence length and vocabulary. But using the windowing
-technique both during training and prediction with a BERT model yields
+performance can be obtained using a much simpler SVM model and surface-level
+features such as sentence length and vocabulary. Using the windowing
+technique during both training and prediction with a BERT model yields
 significantly better results than the SVM models. Using the median to aggregate
 the window-level predictions into a single prediction for the text seems to
 offer the best trade-off between performance and leaning towards overestimating
@@ -637,26 +686,46 @@ difficult texts, with no texts at the Englishtown level corresponding to C2 on
 the CEFR scale. There is a lack of publicly available CEFR-labeled datasets,
 especially of a size suitable for training a language model such as BERT.
 
-Another limitation is the black box nature of the BERT language model. It is
+Another limitation is the black-box nature of the BERT language model. It is
 very difficult to find out what features in the text the language model is
 primarily using for its predictions. An assumption was made that the model
-likely latches particularly onto surface level features such as sentence length and
-total text length, but it difficult to prove. The windowing technique solves to
+likely latches particularly onto surface-level features such as sentence length and
+total text length, but it is difficult to prove. The windowing technique tries to
 fix that and let the model focus on deeper syntactic features, but it is once
 again very difficult to prove whether that is actually the result.
 
+There is also a limitation and room for improvement in the algorithm used for
+the windowing of the data. The windowing is done using the most naive algorithm,
+which is simply cutting the text after the 150 character window. This means the window
+will almost certainly stop in the middle of a sentence and likely cut the last word short.
+Stopping in the middle of a sentence could be either positive or negative. It likely does
+something to limit sentence length as a very influential feature of the prediction. At the same
+time, the language model does not get the whole context of the last sentence in the window,
+which could also impact the accuracy of the prediction negatively. The last word being cut short
+is also not ideal, as it will result in either a different word or an out of vocabulary word.
+Future work building on this method might wish to optimize the windowing algorithm. It is possible
+working with a window based on number of words or sentences might work better than number
+of characters.
+
 As mentioned before, it would be interesting to work on optimizing the bins
-converting FRE score to CEFR labels. The optimal bin ranges likely depends on
-the nature of the texts that it is going to be used on. Methods like
+converting FRE score to CEFR labels. The optimal bin ranges likely depend on
+the nature of the texts the formula is used on. Methods like
 entropy-based binning or error-based binning would be good candidates to
-achieve optimized bins for a specific task. It has been shown that a
+achieve optimized bins for a specific task. I have shown that a
 general-purpose language model like BERT is able to achieve significantly
-better results than using just surface level features. It is likely that even
-more performance can be gained by using a model more specifically designed for
+better results than using just surface-level features. Even
+more performance can likely be gained by using a model specifically designed for
 the task at hand. The best estimators for readability are deeper
 syntactic, semantic, and discourse features. Designing a specialized model that
 is able to explicitly use these types of features would be an interesting
-avenue for future work on this topic.
+avenue for future work on this topic. It would also be interesting to try to use a more
+sophisticated method to aggregate the classifications of each window into a single score.
+For example, an RNN might be able to use some of the sequential information to produce
+a more accurate score for each whole text.
+
+\section{Acknowledgements}
+
+The author acknowledges the IT University of Copenhagen HPC resources made available for conducting the research reported in this paper.
 
 \printbibliography
 
@@ -859,5 +928,10 @@ avenue for future work on this topic.
   disability\\
   \bottomrule
 \end{longtable}
+
+\section{Project Code}
+
+The code used to obtain the results and produce the plots presented in the paper is available at
+\url{https://github.com/gustavkrist/bachelor}.
 
 \end{document}
